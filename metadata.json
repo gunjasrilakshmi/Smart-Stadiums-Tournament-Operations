@@ -1,0 +1,6 @@
+{
+  "name": "FIFA World Cup 2026 Stadium Hub",
+  "description": "A full-stack, GenAI-powered stadium operations and fan experience platform for the 2026 FIFA World Cup, featuring smart crowd management, dynamic transport guides, and real-time operational intelligence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
