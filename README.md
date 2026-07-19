@@ -58,4 +58,3 @@ The app will run on `http://localhost:3000`.
 * **Graceful Degradation**: If no API key is specified, the application automatically triggers fallback logic (predefined heuristics/local rules) to ensure a flawless experience.
 * **Performance Focused**: No HMR flicker, single-file server builds via esbuild for fast cold-starts.
 * **Pristine UI**: Balanced typography, high-contrast dark palette, tactile interactive feedback, and desktop-to-mobile fluid responsiveness.
-
