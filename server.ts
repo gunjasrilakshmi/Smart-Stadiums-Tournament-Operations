@@ -3,6 +3,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
+import { analyzeIncidentHeuristics, simulateGateFlows } from "./src/operations.ts";
 
 // Load environment variables
 dotenv.config();
@@ -162,22 +163,7 @@ app.post("/api/stadium/simulate-crowd", (req, res) => {
     return res.status(400).json({ error: "Invalid crowd level" });
   }
   crowdCongestionLevel = level;
-  if (level === "NORMAL") {
-    gateWaitTimes.GateA.waitTime = 10; gateWaitTimes.GateA.status = "CLEAR";
-    gateWaitTimes.GateB.waitTime = 18; gateWaitTimes.GateB.status = "CLEAR";
-    gateWaitTimes.GateC.waitTime = 8;  gateWaitTimes.GateC.status = "CLEAR";
-    gateWaitTimes.GateD.waitTime = 12; gateWaitTimes.GateD.status = "CLEAR";
-  } else if (level === "PEAK") {
-    gateWaitTimes.GateA.waitTime = 15; gateWaitTimes.GateA.status = "MODERATE";
-    gateWaitTimes.GateB.waitTime = 32; gateWaitTimes.GateB.status = "BUSY";
-    gateWaitTimes.GateC.waitTime = 12; gateWaitTimes.GateC.status = "CLEAR";
-    gateWaitTimes.GateD.waitTime = 22; gateWaitTimes.GateD.status = "MODERATE";
-  } else {
-    gateWaitTimes.GateA.waitTime = 28; gateWaitTimes.GateA.status = "BUSY";
-    gateWaitTimes.GateB.waitTime = 48; gateWaitTimes.GateB.status = "BUSY";
-    gateWaitTimes.GateC.waitTime = 20; gateWaitTimes.GateC.status = "MODERATE";
-    gateWaitTimes.GateD.waitTime = 38; gateWaitTimes.GateD.status = "BUSY";
-  }
+  gateWaitTimes = simulateGateFlows(level as any) as any;
   res.json({ message: `Crowd density updated to ${level}`, gateWaitTimes });
 });
 
@@ -306,29 +292,11 @@ Output MUST be strictly JSON.`;
     if (result.recommendedAction) aiAction = result.recommendedAction;
   } catch (error) {
     console.error("Gemini Incident Analysis Failed. Using heuristics.", error);
-    // Fallback heuristic rules
-    const descLower = description.toLowerCase();
-    if (descLower.includes("hurt") || descLower.includes("faint") || descLower.includes("medical") || descLower.includes("heart")) {
-      category = "Medical Emergency";
-      priority = "CRITICAL";
-      assignedTeam = "Medical Rapid Response";
-      aiAction = "Dispatch nearby paramedic team. Inform emergency command.";
-    } else if (descLower.includes("fight") || descLower.includes("weapon") || descLower.includes("steal") || descLower.includes("threat")) {
-      category = "Security Threat";
-      priority = "CRITICAL";
-      assignedTeam = "Stadium Security Unit 2";
-      aiAction = "Mobilize immediate police/security intervention at the location.";
-    } else if (descLower.includes("crowd") || descLower.includes("congest") || descLower.includes("stuck") || descLower.includes("line")) {
-      category = "Crowd Control";
-      priority = "HIGH";
-      assignedTeam = "Gate Operations & Flow Staff";
-      aiAction = "Deploy crowd marshals to direct fans and ease queues.";
-    } else if (descLower.includes("spill") || descLower.includes("leak") || descLower.includes("trash") || descLower.includes("water")) {
-      category = "Sanitation / Maintenance";
-      priority = "MEDIUM";
-      assignedTeam = "Cleaning Squad West";
-      aiAction = "Send sanitation personnel with wet floor markers and cleanup kit.";
-    }
+    const fallback = analyzeIncidentHeuristics(description);
+    category = fallback.category;
+    priority = fallback.priority;
+    assignedTeam = fallback.assignedTeam;
+    aiAction = fallback.aiAction;
   }
 
   const newIncident: Incident = {
