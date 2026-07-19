@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { MapPin, TramFront, Bus, Compass, Eye, HeartHandshake } from "lucide-react";
 import { Gate } from "../types.ts";
+import { getGateColor } from "../utils.ts";
 
 interface StadiumMapProps {
   gateWaitTimes: { [key: string]: Gate };
@@ -19,12 +20,6 @@ export default function StadiumMap({ gateWaitTimes, onSelectGate, selectedGateKe
     { id: "sensory2", type: "accessibility", name: "Sensory Haven (Sec 330)", x: "68%", y: "58%", icon: Eye, desc: "Quiet space for sensory-sensitive fans" },
     { id: "mobility", type: "accessibility", name: "Mobility Support Station", x: "82%", y: "18%", icon: HeartHandshake, desc: "Wheelchair assistance & golf carts (Gate C)" }
   ];
-
-  const getGateColor = (waitTime: number) => {
-    if (waitTime < 15) return "stroke-emerald-400 fill-emerald-950/40 text-emerald-400";
-    if (waitTime < 30) return "stroke-amber-400 fill-amber-950/40 text-amber-400";
-    return "stroke-rose-400 fill-rose-950/40 text-rose-400";
-  };
 
   return (
     <div id="stadium-interactive-map" className="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-xl">
@@ -97,8 +92,12 @@ export default function StadiumMap({ gateWaitTimes, onSelectGate, selectedGateKe
             
             {/* Gate A - North (Meadowlands Access) */}
             <g 
-              className="cursor-pointer group"
+              role="button"
+              tabIndex={0}
+              aria-label={`Gate A, wait time is ${gateWaitTimes.GateA?.waitTime || 0} minutes, flow is ${gateWaitTimes.GateA?.status || 'unknown'}`}
+              className="cursor-pointer group outline-none focus-visible:stroke-white focus-visible:ring-2 focus-visible:ring-emerald-400"
               onClick={() => onSelectGate("GateA")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { onSelectGate("GateA"); e.preventDefault(); } }}
               onMouseEnter={() => setHoveredZone("Gate A")}
               onMouseLeave={() => setHoveredZone(null)}
             >
@@ -115,8 +114,12 @@ export default function StadiumMap({ gateWaitTimes, onSelectGate, selectedGateKe
 
             {/* Gate B - East */}
             <g 
-              className="cursor-pointer group"
+              role="button"
+              tabIndex={0}
+              aria-label={`Gate B, wait time is ${gateWaitTimes.GateB?.waitTime || 0} minutes, flow is ${gateWaitTimes.GateB?.status || 'unknown'}`}
+              className="cursor-pointer group outline-none focus-visible:stroke-white focus-visible:ring-2 focus-visible:ring-emerald-400"
               onClick={() => onSelectGate("GateB")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { onSelectGate("GateB"); e.preventDefault(); } }}
               onMouseEnter={() => setHoveredZone("Gate B")}
               onMouseLeave={() => setHoveredZone(null)}
             >
@@ -133,8 +136,12 @@ export default function StadiumMap({ gateWaitTimes, onSelectGate, selectedGateKe
 
             {/* Gate C - South */}
             <g 
-              className="cursor-pointer group"
+              role="button"
+              tabIndex={0}
+              aria-label={`Gate C, wait time is ${gateWaitTimes.GateC?.waitTime || 0} minutes, flow is ${gateWaitTimes.GateC?.status || 'unknown'}`}
+              className="cursor-pointer group outline-none focus-visible:stroke-white focus-visible:ring-2 focus-visible:ring-emerald-400"
               onClick={() => onSelectGate("GateC")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { onSelectGate("GateC"); e.preventDefault(); } }}
               onMouseEnter={() => setHoveredZone("Gate C")}
               onMouseLeave={() => setHoveredZone(null)}
             >
@@ -151,8 +158,12 @@ export default function StadiumMap({ gateWaitTimes, onSelectGate, selectedGateKe
 
             {/* Gate D - West */}
             <g 
-              className="cursor-pointer group"
+              role="button"
+              tabIndex={0}
+              aria-label={`Gate D, wait time is ${gateWaitTimes.GateD?.waitTime || 0} minutes, flow is ${gateWaitTimes.GateD?.status || 'unknown'}`}
+              className="cursor-pointer group outline-none focus-visible:stroke-white focus-visible:ring-2 focus-visible:ring-emerald-400"
               onClick={() => onSelectGate("GateD")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { onSelectGate("GateD"); e.preventDefault(); } }}
               onMouseEnter={() => setHoveredZone("Gate D")}
               onMouseLeave={() => setHoveredZone(null)}
             >
@@ -176,10 +187,15 @@ export default function StadiumMap({ gateWaitTimes, onSelectGate, selectedGateKe
             return (
               <div
                 key={fac.id}
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200 group"
+                role="button"
+                tabIndex={0}
+                aria-label={`${fac.name}. ${fac.desc}`}
+                className="absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200 group outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rounded-full"
                 style={{ left: fac.x, top: fac.y }}
                 onMouseEnter={() => setHoveredZone(fac.id)}
                 onMouseLeave={() => setHoveredZone(null)}
+                onFocus={() => setHoveredZone(fac.id)}
+                onBlur={() => setHoveredZone(null)}
               >
                 <div className={`p-1.5 rounded-full shadow-lg border transition-all duration-200 cursor-help ${
                   fac.type === "transport" 

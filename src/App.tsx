@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { StadiumStatus, Incident, Announcement, ChatMessage, Gate } from "./types.ts";
 import StadiumMap from "./components/StadiumMap.tsx";
+import { calculateAverageWaitTime, getPriorityBadgeColor, filterConcessions } from "./utils.ts";
 
 export default function App() {
   // Current Active Role
@@ -299,15 +300,6 @@ export default function App() {
     }
   };
 
-  const getPriorityBadgeColor = (prio: string) => {
-    switch (prio) {
-      case "CRITICAL": return "bg-rose-500/10 text-rose-400 border-rose-500/25";
-      case "HIGH": return "bg-orange-500/10 text-orange-400 border-orange-500/25";
-      case "MEDIUM": return "bg-amber-500/10 text-amber-400 border-amber-500/25";
-      default: return "bg-sky-500/10 text-sky-400 border-sky-500/25";
-    }
-  };
-
   const getAnnouncementIcon = (type: string) => {
     switch (type) {
       case "EMERGENCY": return <AlertTriangle className="w-4 h-4 text-rose-400" />;
@@ -317,12 +309,10 @@ export default function App() {
     }
   };
 
-  const filteredConcessions = stadiumStatus?.concessionsWaitTimes.filter((item) => {
-    if (concessionsFilter === "ALL") return true;
-    if (concessionsFilter === "ECO") return item.ecoFriendly;
-    if (concessionsFilter === "ACCESSIBILITY") return item.type.includes("Accessibility");
-    return true;
-  });
+  const filteredConcessions = filterConcessions(
+    stadiumStatus?.concessionsWaitTimes || [],
+    concessionsFilter
+  );
 
   return (
     <div id="root-viewport" className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-black">
@@ -348,36 +338,51 @@ export default function App() {
           </div>
 
           {/* Role Navigator Selector */}
-          <div className="flex bg-slate-950 border border-slate-800 p-1.5 rounded-xl w-full md:w-auto">
+          <div className="flex bg-slate-950 border border-slate-800 p-1.5 rounded-xl w-full md:w-auto" role="tablist" aria-label="Stadium Hub Role Selection">
             <button
+              id="tab-fan"
+              role="tab"
+              aria-selected={activeRole === "FAN"}
+              aria-controls="panel-fan"
+              aria-label="Switch to Fan Hub view"
               onClick={() => setActiveRole("FAN")}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium font-display transition-all duration-200 ${
+              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium font-display transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
                 activeRole === "FAN" 
                   ? "bg-slate-800 text-white shadow-md border border-slate-700/50" 
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <span>🎫</span> Fan Hub
+              <span aria-hidden="true">🎫</span> Fan Hub
             </button>
             <button
+              id="tab-volunteer"
+              role="tab"
+              aria-selected={activeRole === "VOLUNTEER"}
+              aria-controls="panel-volunteer"
+              aria-label="Switch to Volunteer Portal view"
               onClick={() => setActiveRole("VOLUNTEER")}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium font-display transition-all duration-200 ${
+              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium font-display transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
                 activeRole === "VOLUNTEER" 
                   ? "bg-slate-800 text-white shadow-md border border-slate-700/50" 
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <span>🙋</span> Volunteer Portal
+              <span aria-hidden="true">🙋</span> Volunteer Portal
             </button>
             <button
+              id="tab-organizer"
+              role="tab"
+              aria-selected={activeRole === "ORGANIZER"}
+              aria-controls="panel-organizer"
+              aria-label="Switch to Commander Center view"
               onClick={() => setActiveRole("ORGANIZER")}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium font-display transition-all duration-200 ${
+              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium font-display transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
                 activeRole === "ORGANIZER" 
                   ? "bg-slate-800 text-white shadow-md border border-slate-700/50" 
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <span>👔</span> Commander Center
+              <span aria-hidden="true">👔</span> Commander Center
             </button>
           </div>
 
@@ -406,7 +411,7 @@ export default function App() {
             <div className="flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-emerald-400" />
               <span>Avg Gate Wait: <strong className="text-white">
-                {stadiumStatus ? Math.round((Object.values(stadiumStatus.gateWaitTimes) as Gate[]).reduce((acc: number, curr: Gate) => acc + curr.waitTime, 0) / 4) : "--"} mins
+                {stadiumStatus ? calculateAverageWaitTime(stadiumStatus.gateWaitTimes) : "--"} mins
               </strong></span>
             </div>
           </div>
@@ -445,7 +450,7 @@ export default function App() {
 
         {/* ROLE 1: FAN COMPANION */}
         {activeRole === "FAN" && (
-          <div className="space-y-6">
+          <div role="tabpanel" id="panel-fan" aria-labelledby="tab-fan" className="space-y-6">
             
             {/* Intro text */}
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -485,10 +490,11 @@ export default function App() {
                   </div>
 
                   {/* Dining filter pills */}
-                  <div className="flex gap-2 mb-4 text-[10px] font-mono">
+                  <div className="flex gap-2 mb-4 text-[10px] font-mono" role="group" aria-label="Filter concessions">
                     <button 
                       onClick={() => setConcessionsFilter("ALL")}
-                      className={`px-2.5 py-1 rounded border transition-colors ${
+                      aria-pressed={concessionsFilter === "ALL"}
+                      className={`px-2.5 py-1 rounded border transition-colors outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                         concessionsFilter === "ALL" 
                           ? "bg-slate-800 text-white border-slate-700" 
                           : "text-slate-500 border-transparent hover:text-slate-300"
@@ -498,17 +504,19 @@ export default function App() {
                     </button>
                     <button 
                       onClick={() => setConcessionsFilter("ECO")}
-                      className={`px-2.5 py-1 rounded border transition-colors flex items-center gap-1 ${
+                      aria-pressed={concessionsFilter === "ECO"}
+                      className={`px-2.5 py-1 rounded border transition-colors flex items-center gap-1 outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                         concessionsFilter === "ECO" 
                           ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
                           : "text-slate-500 border-transparent hover:text-slate-300"
                       }`}
                     >
-                      <Leaf className="w-3 h-3" /> Zero-Waste
+                      <Leaf className="w-3 h-3" aria-hidden="true" /> Zero-Waste
                     </button>
                     <button 
                       onClick={() => setConcessionsFilter("ACCESSIBILITY")}
-                      className={`px-2.5 py-1 rounded border transition-colors ${
+                      aria-pressed={concessionsFilter === "ACCESSIBILITY"}
+                      className={`px-2.5 py-1 rounded border transition-colors outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                         concessionsFilter === "ACCESSIBILITY" 
                           ? "bg-sky-500/10 text-sky-400 border-sky-500/20" 
                           : "text-slate-500 border-transparent hover:text-slate-300"
@@ -599,28 +607,28 @@ export default function App() {
                 </div>
 
                 {/* Predefined helpful prompt buttons */}
-                <div className="flex flex-wrap gap-2 py-2.5 border-t border-slate-800/60">
+                <div className="flex flex-wrap gap-2 py-2.5 border-t border-slate-800/60" role="group" aria-label="Quick questions">
                   <button 
                     onClick={() => handleSendChat("Where is public transit to NYC and how do I board?")}
-                    className="text-xxs px-3 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800/80 rounded-lg text-slate-300 transition-colors cursor-pointer"
+                    className="text-xxs px-3 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800/80 rounded-lg text-slate-300 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:border-transparent"
                   >
                     🚇 Train to NYC?
                   </button>
                   <button 
                     onClick={() => handleSendChat("Where are the Sensory Rooms and quiet zones in MetLife?")}
-                    className="text-xxs px-3 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800/80 rounded-lg text-slate-300 transition-colors cursor-pointer"
+                    className="text-xxs px-3 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800/80 rounded-lg text-slate-300 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:border-transparent"
                   >
                     🧩 Sensory Haven info
                   </button>
                   <button 
                     onClick={() => handleSendChat("¿Dónde están los baños con acceso de silla de ruedas?")}
-                    className="text-xxs px-3 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800/80 rounded-lg text-slate-300 transition-colors cursor-pointer"
+                    className="text-xxs px-3 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800/80 rounded-lg text-slate-300 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:border-transparent"
                   >
                     🇪🇸 Baños accesibles?
                   </button>
                   <button 
                     onClick={() => handleSendChat("How does the reusable cup return discount work?")}
-                    className="text-xxs px-3 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800/80 rounded-lg text-slate-300 transition-colors cursor-pointer"
+                    className="text-xxs px-3 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800/80 rounded-lg text-slate-300 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:border-transparent"
                   >
                     🌱 Eco Cup Reward?
                   </button>
@@ -629,16 +637,19 @@ export default function App() {
                 {/* Chat input form */}
                 <div className="flex gap-2">
                   <input
+                    id="chat-input"
                     type="text"
+                    aria-label="Ask the stadium fan assistant a question"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSendChat()}
                     placeholder="Ask about elevators, rideshares, food menus, or Spanish help..."
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus-visible:ring-2 focus-visible:ring-emerald-400"
                   />
                   <button
                     onClick={() => handleSendChat()}
-                    className="p-2.5 bg-emerald-500 text-slate-950 rounded-xl font-bold hover:bg-emerald-400 transition-colors cursor-pointer"
+                    aria-label="Send message to assistant"
+                    className="p-2.5 bg-emerald-500 text-slate-950 rounded-xl font-bold hover:bg-emerald-400 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:outline-none"
                   >
                     <Send className="w-4 h-4" />
                   </button>
@@ -653,7 +664,7 @@ export default function App() {
 
         {/* ROLE 2: VOLUNTEER HUB */}
         {activeRole === "VOLUNTEER" && (
-          <div className="space-y-6">
+          <div role="tabpanel" id="panel-volunteer" aria-labelledby="tab-volunteer" className="space-y-6">
             
             {/* Intro Header */}
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
@@ -685,20 +696,22 @@ export default function App() {
 
                 <form onSubmit={handleReportIncident} className="space-y-4">
                   <div>
-                    <label className="text-xxs font-mono text-slate-400 uppercase tracking-wider block mb-1">YOUR NAME / ID</label>
+                    <label htmlFor="inc-reporter" className="text-xxs font-mono text-slate-400 uppercase tracking-wider block mb-1">YOUR NAME / ID</label>
                     <input
+                      id="inc-reporter"
                       type="text"
                       required
                       value={incReporter}
                       onChange={(e) => setIncReporter(e.target.value)}
                       placeholder="Volunteer Kenji T."
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50 focus-visible:ring-2 focus-visible:ring-emerald-400"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xxs font-mono text-slate-400 uppercase tracking-wider block mb-1">SPECIFIC LOCATION</label>
+                    <label htmlFor="inc-location" className="text-xxs font-mono text-slate-400 uppercase tracking-wider block mb-1">SPECIFIC LOCATION</label>
                     <input
+                      id="inc-location"
                       type="text"
                       required
                       value={incLocation}
@@ -709,14 +722,15 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="text-xxs font-mono text-slate-400 uppercase tracking-wider block mb-1">WHAT IS HAPPENING?</label>
+                    <label htmlFor="inc-description" className="text-xxs font-mono text-slate-400 uppercase tracking-wider block mb-1">WHAT IS HAPPENING?</label>
                     <textarea
+                      id="inc-description"
                       required
                       rows={4}
                       value={incDescription}
                       onChange={(e) => setIncDescription(e.target.value)}
                       placeholder="e.g., ticket barcode scanner went black and turned off. 20+ fans are backlog in line 4. Need a technician."
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50 focus-visible:ring-2 focus-visible:ring-emerald-400"
                     />
                   </div>
 
@@ -854,7 +868,7 @@ export default function App() {
 
         {/* ROLE 3: ORGANIZER COMMAND CENTRE */}
         {activeRole === "ORGANIZER" && (
-          <div className="space-y-6">
+          <div role="tabpanel" id="panel-organizer" aria-labelledby="tab-organizer" className="space-y-6">
             
             {/* Command Header */}
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
@@ -924,10 +938,11 @@ export default function App() {
                     <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex gap-2">
                       <input 
                         type="text" 
+                        aria-label="Tactical operational query for advisor"
                         value={decisionQuery}
                         onChange={(e) => setDecisionQuery(e.target.value)}
                         placeholder="e.g. Train shuttle suspended post-game. Heavy rain starting at Gate D. How do we shift flow?"
-                        className="flex-1 bg-transparent border-none text-xs text-white focus:outline-none placeholder-slate-500"
+                        className="flex-1 bg-transparent border-none text-xs text-white focus:outline-none placeholder-slate-500 focus-visible:ring-2 focus-visible:ring-emerald-400 rounded"
                       />
                       <button
                         type="submit"
@@ -996,8 +1011,9 @@ export default function App() {
                   <div className="flex gap-2">
                     <select
                       value={annType}
+                      aria-label="Announcement type select"
                       onChange={(e) => setAnnType(e.target.value as any)}
-                      className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500/50"
+                      className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500/50 focus-visible:ring-2 focus-visible:ring-emerald-400"
                     >
                       <option value="INFO">ℹ️ General Info</option>
                       <option value="CROWD">👥 Crowd Alert</option>
@@ -1008,10 +1024,11 @@ export default function App() {
                     <input
                       type="text"
                       required
+                      aria-label="Announcement text prompt"
                       value={annDraft}
                       onChange={(e) => setAnnDraft(e.target.value)}
                       placeholder="e.g. Please use Gate C for immediate entry."
-                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50"
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50 focus-visible:ring-2 focus-visible:ring-emerald-400"
                     />
                   </div>
 
